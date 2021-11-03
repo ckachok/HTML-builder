@@ -16,3 +16,12 @@ const getFiles = async () => {
     }
   })
 }
+
+const copyFileToDirectory = async (fileName) => {
+  const pathCurrentFile = path.join(pathCurrentFolder, fileName);
+  const pathCopiedFile = path.join(pathCopiedFolder, fileName);
+  await copyFile(pathCurrentFile, pathCopiedFile);
+}
+
+createDirectory();
+getFiles();
