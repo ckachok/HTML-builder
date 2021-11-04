@@ -1,6 +1,7 @@
 const { readdir } = require('fs/promises');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const pathStylesFolder = path.join(__dirname, 'styles');
 const pathProjectFolder = path.join(__dirname, 'project-dist');
@@ -8,7 +9,13 @@ const arrStyles = [];
  
 const writeableStream = fs.createWriteStream(path.join(pathProjectFolder, 'bundle.css'));
 
-const readStyles = async (styleFile) => {
+const writeStyles = () => {
+  arrStyles.forEach(style => style.then((chunkStyle) => {
+    writeableStream.write(`${chunkStyle}${os.EOL}`);
+  }));
+}
+
+const readStyles = (styleFile) => {
   let styles = '';
   const filePath = path.join(pathStylesFolder, styleFile.name);
 
@@ -32,3 +39,13 @@ const getStyleFiles = async () => {
     };
   });
 }
+
+const createBundleCSS = async () => {
+  const styleFiles = await getStyleFiles();
+  styleFiles.forEach(styleFile => {
+    arrStyles.push(readStyles(styleFile))
+  });
+  writeStyles()
+}
+
+createBundleCSS();
