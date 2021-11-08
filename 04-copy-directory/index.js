@@ -29,7 +29,7 @@ const copyFileToDirectory = async (fileName) => {
 
 const init = async () => {
   await deleteDirectory();
-  await createDirectory()
+  await createDirectory();
   await getFiles();
 }
 

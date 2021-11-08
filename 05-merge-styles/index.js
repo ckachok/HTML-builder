@@ -43,9 +43,9 @@ const getStyleFiles = async () => {
 const createBundleCSS = async () => {
   const styleFiles = await getStyleFiles();
   styleFiles.forEach(styleFile => {
-    arrStyles.push(readStyles(styleFile))
+    arrStyles.push(readStyles(styleFile));
   });
-  writeStyles()
+  writeStyles();
 }
 
 createBundleCSS();
