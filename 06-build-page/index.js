@@ -1,26 +1,26 @@
-const { readdir, mkdir, rmdir } = require('fs/promises');
+const { readdir, mkdir, rm, copyFile } = require('fs/promises');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const pathProjectFolder = path.join(__dirname, 'project-dist');
-const pathComponentsFolder = path.join(__dirname, 'components');
-const pathStylesFolder = path.join(__dirname, 'styles');
+const pathProjectDirectory = path.join(__dirname, 'project-dist');
+const pathComponentsDirectory = path.join(__dirname, 'components');
+const pathAssetsDirectory = path.join(__dirname, 'assets');
+const pathStylesDirectory = path.join(__dirname, 'styles');
 const pathTemplate = path.join(__dirname, 'template.html');
-// const arrStyles = [];
 
-const createDirectory = async (pathFolder) => {
-  await mkdir(pathFolder, { recursive: true });
+const deleteDirectory = async (pathDirectory) => {
+  await rm(pathDirectory, { recursive: true, force: true });
 }
 
-const deleteDirectory = async (pathFolder) => {
-  await rmdir(pathFolder, { recursive: true });
+const createDirectory = async (pathDirectory) => {
+  await mkdir(pathDirectory, { recursive: true });
 }
 
-const getFiles = async (pathFolderFiles, extension) => {
-  const folderFiles = await readdir(pathFolderFiles, { withFileTypes: true });
+const getDirectoryFiles = async (pathDirectory, extension) => {
+  const directoryFiles = await readdir(pathDirectory, { withFileTypes: true });
 
-  return folderFiles.filter(file => {
+  return directoryFiles.filter(file => {
     const extName = path.extname(file.name).slice(1);
     
     if (file.isFile() && extName === extension) {
@@ -44,15 +44,15 @@ const getHtmlTemplate = async () => {
 }
 
 const createBundleHtml = async () => {
-  const components = await getFiles(pathComponentsFolder, 'html');
+  const components = await getDirectoryFiles(pathComponentsDirectory, 'html');
   let htmlBundle = await getHtmlTemplate();
 
   return Promise.all(components.map(component => 
     new Promise((res, rej) => {
       let htmlComponent = '';
-      const pathComponent = path.join(pathComponentsFolder, component.name);
+      const pathComponent = path.join(pathComponentsDirectory, component.name);
       const nameComponent = path.basename(pathComponent, '.html');
-      const componentReadStream = fs.createReadStream(pathComponent);
+      const componentReadStream = fs.createReadStream(pathComponent, 'utf-8');
 
       componentReadStream.on('data', data => {
         htmlComponent += data;
@@ -65,20 +65,15 @@ const createBundleHtml = async () => {
   )).then(() => htmlBundle);
 }
 
-const writeBundleHtml = (html) => {
-  let writeableStream = fs.createWriteStream(path.join(pathProjectFolder, 'index.html'));
-  writeableStream.write(html);
-}
-
 const createBundleStyles = async () => {
-  const styleFiles = await getFiles(pathStylesFolder, 'css');
+  const styleFiles = await getDirectoryFiles(pathStylesDirectory, 'css');
   let styleBundle = '';
 
   return Promise.all(styleFiles.map(styleFile => 
     new Promise((res, rej) => {
       let styles = '';
-      const pathStyleFile = path.join(pathStylesFolder, styleFile.name);
-      const styleFileReadStream = fs.createReadStream(pathStyleFile);
+      const pathStyleFile = path.join(pathStylesDirectory, styleFile.name);
+      const styleFileReadStream = fs.createReadStream(pathStyleFile, 'utf-8');
 
       styleFileReadStream.on('data', data => {
         styles += data;
@@ -91,20 +86,45 @@ const createBundleStyles = async () => {
   )).then(() => styleBundle);
 }
 
-const writeBundleStyles = (style) => {
-  const writeableStream = fs.createWriteStream(path.join(pathProjectFolder, 'style.css'));
-  writeableStream.write(style);
+const writeBundle = (outputFile, outputFileName) => {
+  let writeableStream = fs.createWriteStream(path.join(pathProjectDirectory, outputFileName));
+  writeableStream.write(outputFile);
+}
+
+const copyDirectory = async (pathDirectory, pathCopiedDirectory) => {
+  await createDirectory(pathCopiedDirectory);
+
+  const directoryContents = await readdir(pathDirectory, { withFileTypes: true });
+  directoryContents.forEach(file => {
+    if (file.isDirectory()) {
+      const directoryName = file.name;
+      const pathSubdirectory = path.join(pathDirectory, directoryName);
+      const pathCopiedSubdirectory = path.join(pathCopiedDirectory, directoryName);
+      copyDirectory(pathSubdirectory, pathCopiedSubdirectory);
+    } else if (file.isFile()) {
+      copyFileToDirectory(file.name, pathDirectory, pathCopiedDirectory);
+    }
+  })
+}
+
+const copyFileToDirectory = async (fileName, pathDirectory, pathCopiedDirectory) => {
+  const pathFile = path.join(pathDirectory, fileName);
+  const pathCopiedFile = path.join(pathCopiedDirectory, fileName);
+  await copyFile(pathFile, pathCopiedFile);
 }
 
 const init = async () => {
-  await deleteDirectory(pathProjectFolder);
-  await createDirectory(pathProjectFolder);
+  await deleteDirectory(pathProjectDirectory);
+  await createDirectory(pathProjectDirectory);
 
   const htmlBundle = await createBundleHtml();
-  writeBundleHtml(htmlBundle);
+  writeBundle(htmlBundle, 'index.html');
 
   const stylesBundle = await createBundleStyles();
-  writeBundleStyles(stylesBundle);
+  writeBundle(stylesBundle, 'style.css');
+
+  const pathCopiedDirectory = path.join(pathProjectDirectory, 'assets');
+  await copyDirectory(pathAssetsDirectory, pathCopiedDirectory);
 }
 
 init()
