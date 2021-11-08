@@ -79,7 +79,7 @@ const createBundleStyles = async () => {
         styles += data;
       });
       styleFileReadStream.on('end', () => {
-        styleBundle = styleBundle + styles + os.EOL;
+        styleBundle = styleBundle.trim() + os.EOL + os.EOL + styles.trim();
         res(styleBundle);
       });
     })
@@ -127,7 +127,7 @@ const init = async () => {
   await copyDirectory(pathAssetsDirectory, pathCopiedDirectory);
 }
 
-init()
+init();
 
 
 /*
